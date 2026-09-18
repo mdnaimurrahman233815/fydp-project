@@ -2,7 +2,6 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from './schema';
 
-// Connection details with explicit SSL configuration for TiDB Cloud
 const pool = mysql.createPool({
   host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
   port: 4000,
@@ -10,13 +9,11 @@ const pool = mysql.createPool({
   password: '3VnbwZGgiUL4ixQw',
   database: 'fydp_hub',
   ssl: {
-    minVersion: 'TLSv1.2',
     rejectUnauthorized: false,
   },
   waitForConnections: true,
-  connectionLimit: 5,
+  connectionLimit: 10,
   queueLimit: 0,
-  enableKeepAlive: true,
 });
 
-export const db = drizzle(pool, { schema, mode: 'default' });
+export const db = drizzle(pool, { schema });
