@@ -40,7 +40,7 @@ export async function registerStudent(_prev: ActionState, formData: FormData): P
   const [created] = await db
     .insert(students)
     .values({ fullName, email, rollNumber, department, passwordHash })
-    .returning({ id: students.id });
+    .$returningId();
 
   if (!created) return { error: "Could not create account." };
   await createSession(created.id, "student");

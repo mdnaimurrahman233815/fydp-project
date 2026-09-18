@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -38,7 +38,7 @@ export async function createGroup(_prev: ActionState, formData: FormData): Promi
       .limit(1);
     if (existing) return null;
 
-    const [group] = await tx
+    const [groupRes] = await tx
       .insert(groups)
       .values({
         name,
@@ -46,17 +46,18 @@ export async function createGroup(_prev: ActionState, formData: FormData): Promi
         leaderStudentId: user.id,
         isActive: true,
       })
-      .returning();
-    if (!group) return null;
+      .$returningId();
+      
+    if (!groupRes) return null;
 
-    await tx.insert(groupMembers).values({ groupId: group.id, studentId: user.id });
+    await tx.insert(groupMembers).values({ groupId: groupRes.id, studentId: user.id });
     await tx.insert(projects).values({
-      groupId: group.id,
+      groupId: groupRes.id,
       title: projectTitle || "Untitled project",
       description: projectDescription || null,
       supervisorTeacherId: supervisorId,
     });
-    return group;
+    return groupRes;
   });
 
   if (!created) return { error: "You already belong to a group." };
@@ -102,7 +103,7 @@ export async function requestToJoin(_prev: ActionState, formData: FormData): Pro
   if (!group || !group.isActive) return { error: "This group is not accepting members." };
 
   const [countRow] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: count() })
     .from(groupMembers)
     .where(eq(groupMembers.groupId, groupId));
   if ((countRow?.total ?? 0) >= MAX_GROUP_SIZE) return { error: "This group is FULL." };

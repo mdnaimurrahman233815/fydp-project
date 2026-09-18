@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, like, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   groupMembers,
@@ -71,9 +71,9 @@ export async function listGroups(filters: {
     const term = `%${filters.q}%`;
     conditions.push(
       or(
-        ilike(groups.name, term),
-        ilike(projects.title, term),
-        ilike(teachers.fullName, term),
+        like(groups.name, term),
+        like(projects.title, term),
+        like(teachers.fullName, term),
       ),
     );
   }
@@ -95,7 +95,7 @@ export async function listGroups(filters: {
       projectDescription: projects.description,
       supervisorId: projects.supervisorTeacherId,
       supervisorName: teachers.fullName,
-      memberCount: sql<number>`cast(count(${groupMembers.id}) as int)`,
+      memberCount: count(groupMembers.id),
       createdAt: groups.createdAt,
     })
     .from(groups)
@@ -249,7 +249,7 @@ export async function listLeaderRequests(groupId: number) {
 
 export async function countPendingForGroup(groupId: number) {
   const [row] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: count() })
     .from(joinRequests)
     .where(and(eq(joinRequests.groupId, groupId), eq(joinRequests.status, "PENDING")));
   return row?.total ?? 0;
@@ -257,7 +257,7 @@ export async function countPendingForGroup(groupId: number) {
 
 export async function countUnread(role: "student" | "teacher", userId: number) {
   const [row] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: count() })
     .from(messages)
     .where(
       and(
@@ -270,13 +270,13 @@ export async function countUnread(role: "student" | "teacher", userId: number) {
 }
 
 export async function dashboardStats() {
-  const [studentCount] = await db.select({ total: sql<number>`cast(count(*) as int)` }).from(students);
-  const [teacherCount] = await db.select({ total: sql<number>`cast(count(*) as int)` }).from(teachers);
-  const [groupCount] = await db.select({ total: sql<number>`cast(count(*) as int)` }).from(groups);
+  const [studentCount] = await db.select({ total: count() }).from(students);
+  const [teacherCount] = await db.select({ total: count() }).from(teachers);
+  const [groupCount] = await db.select({ total: count() }).from(groups);
   const memberCounts = await db
     .select({
       groupId: groupMembers.groupId,
-      total: sql<number>`cast(count(*) as int)`,
+      total: count(),
     })
     .from(groupMembers)
     .groupBy(groupMembers.groupId);
@@ -293,7 +293,7 @@ export async function dashboardStats() {
   }
 
   const [pending] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: count() })
     .from(joinRequests)
     .where(eq(joinRequests.status, "PENDING"));
 
@@ -310,11 +310,11 @@ export async function dashboardStats() {
 export async function listStudentsPage(q: string | undefined, page: number) {
   const term = q?.trim();
   const whereClause = term
-    ? or(ilike(students.fullName, `%${term}%`), ilike(students.rollNumber, `%${term}%`), ilike(students.email, `%${term}%`))
+    ? or(like(students.fullName, `%${term}%`), like(students.rollNumber, `%${term}%`), like(students.email, `%${term}%`))
     : undefined;
 
   const [totalRow] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: count() })
     .from(students)
     .where(whereClause);
 

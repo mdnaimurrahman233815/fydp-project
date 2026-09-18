@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, count, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { groupMembers, groups, joinRequests } from "@/db/schema";
@@ -29,7 +29,7 @@ export async function acceptRequest(formData: FormData) {
       }
 
       const [countRow] = await tx
-        .select({ total: sql<number>`cast(count(*) as int)` })
+        .select({ total: count() })
         .from(groupMembers)
         .where(eq(groupMembers.groupId, user.groupId!));
       if ((countRow?.total ?? 0) >= MAX_GROUP_SIZE) {
