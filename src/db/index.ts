@@ -1,24 +1,13 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import * as schema from './schema';
 
-const databaseUrl = process.env.DATABASE_URL;
+// This creates a connection that works perfectly with TiDB Cloud and Vercel
+const connection = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
-}
-
-const globalForDb = globalThis as typeof globalThis & {
-  __arenaNextJsPostgresqlPool?: Pool;
-};
-
-export const pool =
-  globalForDb.__arenaNextJsPostgresqlPool ??
-  new Pool({
-    connectionString: databaseUrl,
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__arenaNextJsPostgresqlPool = pool;
-}
-
-export const db = drizzle(pool);
+export const db = drizzle(connection, { schema, mode: 'default' });
